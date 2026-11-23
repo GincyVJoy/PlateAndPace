@@ -246,9 +246,18 @@ function addFood(toBasket){
 }
 function searchFood(){
   var box=document.getElementById('fres');if(!box)return;
-  var q=document.getElementById('fq').value.trim().toLowerCase();
-  var m=q?allFoods().filter(function(f){return(f.n+' '+f.de).toLowerCase().indexOf(q)>-1}).slice(0,10):allFoods().slice(0,10);
-  box.innerHTML=m.length?m.map(function(f){return'<button class="chip '+(f.n===picked?'on':'')+'" data-n="'+esc(f.n)+'" onclick="pick(this.dataset.n)">'+esc(f.n)+'</button>'}).join(''):'<span class="meta">No match. Try the Claude estimate below.</span>';
+  var raw=document.getElementById('fq').value.trim().toLowerCase();
+  var stop=['with','and','plus','of','the','mit','und'];
+  var toks=raw.split(/[^a-zäöüß0-9]+/).filter(function(t){return t&&stop.indexOf(t)<0});
+  var m;
+  if(!toks.length)m=allFoods().slice(0,10);
+  else m=allFoods().map(function(f){
+    var hay=(f.n+' '+f.de).toLowerCase(),hs=hay.replace(/[^a-zäöüß0-9]/g,''),sc=0;
+    toks.forEach(function(t){if(hay.indexOf(t)>-1||hs.indexOf(t)>-1)sc++});
+    return{f:f,sc:sc};
+  }).filter(function(x){return x.sc>0}).sort(function(a,b){return b.sc-a.sc}).slice(0,12).map(function(x){return x.f});
+  var tip=toks.length>1&&m.length?'<span class="meta" style="flex-basis:100%">Several foods typed. Tap one at a time, enter grams or pieces, then use “Add to meal basket”.</span>':'';
+  box.innerHTML=m.length?tip+m.map(function(f){return'<button class="chip '+(f.n===picked?'on':'')+'" data-n="'+esc(f.n)+'" onclick="pick(this.dataset.n)">'+esc(f.n)+'</button>'}).join(''):'<span class="meta">No match. Try Open Food Facts below.</span>';
 }
 function pick(n){picked=n;hintFor();searchFood();var g=document.getElementById('fg');if(g)g.focus()}
 function logBasket(){
